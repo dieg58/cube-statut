@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#14181f">
+<title>Cube de statut</title>
+<style>
+:root{
+  --bg:#f2f4f7; --card:#ffffff; --ink:#151a22; --muted:#5d6878; --line:#d8dee6;
+  --accent:#1f4fd1; --on-accent:#ffffff;
+  --st0:#6b7280; --st1:#0f9d58; --st2:#e08a00; --st3:#d42a2a;
+  --f:"SF Pro Text",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0f1318; --card:#181e26; --ink:#eef2f6; --muted:#9aa5b4; --line:#2a333f; --accent:#8fb0ff; --on-accent:#0f1318; color-scheme:dark}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--f)}
+body{padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+main{max-width:480px;margin:0 auto;display:grid;gap:16px}
+h1{font-size:1.35rem;margin:4px 0 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
+.label{font:600 .72rem var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.state{display:flex;align-items:center;gap:14px}
+.badge{width:64px;height:64px;border-radius:16px;display:grid;place-items:center;background:var(--st0);flex:none;transition:background .3s}
+.badge svg{width:34px;height:34px;stroke:#fff;fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.state b{font-size:1.4rem;display:block}
+.state span{color:var(--muted);font-size:.9rem}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button{font:600 1rem var(--f);border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:14px 12px;display:flex;align-items:center;gap:10px;justify-content:center;min-height:56px;cursor:pointer}
+button:disabled{opacity:.45}
+button.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+button .dot{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;flex:none}
+button .dot svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:1px}
+.full{grid-column:1/-1}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+input[type=range]{width:100%}
+select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.note{color:var(--muted);font-size:.88rem;margin:0}
+.err{color:var(--st3);font-size:.9rem;margin:0}
+details summary{cursor:pointer;font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <h1>Cube de statut</h1>
+
+  <section class="card" aria-live="polite">
+    <div class="state">
+      <div class="badge" id="badge"></div>
+      <div><b id="stText">Non connecté</b><span id="stSub">Touchez « Connecter le cube »</span></div>
+    </div>
+    <button class="primary" id="btnConnect">Connecter le cube</button>
+    <p class="err" id="err" hidden></p>
+  </section>
+
+  <section class="card">
+    <div class="label">Choisir un statut</div>
+    <div class="grid" id="statusButtons">
+      <button data-st="1" disabled><span class="dot" style="background:var(--st1)"></span>Disponible</button>
+      <button data-st="2" disabled><span class="dot" style="background:var(--st2)"></span>Concentré</button>
+      <button data-st="3" disabled><span class="dot" style="background:var(--st3)"></span>En appel</button>
+      <button data-st="0" disabled><span class="dot" style="background:var(--st0)"></span>Face du cube</button>
+    </div>
+    <p class="note">Retourner le cube annule toujours un choix fait ici.</p>
+  </section>
+
+  <section class="card">
+    <div class="label">Réglages</div>
+    <div class="row"><span>Luminosité</span><span id="briVal">25 %</span></div>
+    <input type="range" id="bri" min="5" max="40" step="5" value="25" disabled>
+    <div class="row"><span>Durée du mode concentré</span>
+      <select id="focus" disabled>
+        <option value="30">30 min</option><option value="60" selected>1 h</option>
+        <option value="90">1 h 30</option><option value="120">2 h</option>
+      </select>
+    </div>
+    <details>
+      <summary>Programmer les faces du cube</summary>
+      <p class="note">Posez le cube sur la face à programmer, attendez une seconde, puis touchez le statut qu'elle doit afficher.</p>
+      <div class="grid" id="learnButtons">
+        <button data-learn="1" disabled>Disponible</button>
+        <button data-learn="2" disabled>Concentré</button>
+        <button data-learn="3" disabled>En appel</button>
+        <button data-learn="0" disabled>Éteint</button>
+      </div>
+    </details>
+  </section>
+</main>
+
+<script>
+const SVC = "7c0be000-5a7e-4b1d-9c3a-2f6d8e1b4a00";
+const STATUS = "7c0be001-5a7e-4b1d-9c3a-2f6d8e1b4a00";
+const CMD = "7c0be002-5a7e-4b1d-9c3a-2f6d8e1b4a00";
+const NAMES = ["Éteint","Disponible","Concentré","En appel"];
+const SOURCES = ["face posée","choix manuel","appel détecté par l'ordinateur"];
+const ICONS = [
+  '<svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>',
+  '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/></svg>',
+  '<svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5"/></svg>'
+];
+document.querySelectorAll('[data-st] .dot').forEach(d=>{ d.innerHTML = ICONS[+d.parentElement.dataset.st]; });
+
+const $ = id => document.getElementById(id);
+let device = null, cmdChar = null, current = null;
+
+function showError(msg){ const e=$('err'); e.textContent = msg; e.hidden = !msg; }
+function setEnabled(on){
+  document.querySelectorAll('[data-st],[data-learn],#bri,#focus').forEach(el => el.disabled = !on);
+  $('btnConnect').textContent = on ? "Déconnecter" : "Connecter le cube";
+}
+function render(st, src, bat, flags){
+  current = st;
+  $('badge').style.background = `var(--st${st})`;
+  $('badge').innerHTML = ICONS[st];
+  $('stText').textContent = NAMES[st] ?? "?";
+  let sub = SOURCES[src] ?? "";
+  if (bat !== undefined) sub += ` · batterie ${bat} %` + ((flags & 1) ? " (en charge)" : "");
+  if (flags & 4) sub += " · concentré terminé";
+  $('stSub').textContent = sub;
+  document.querySelectorAll('[data-st]').forEach(b => b.setAttribute('aria-pressed', src===1 && +b.dataset.st===st ? "true":"false"));
+}
+async function send(cmd, val){
+  if (!cmdChar) return;
+  try { await cmdChar.writeValueWithoutResponse(new Uint8Array([cmd, val])); }
+  catch(e){ try { await cmdChar.writeValue(new Uint8Array([cmd, val])); } catch(e2){ showError("Envoi impossible : " + e2.message); } }
+}
+function onDisconnected(){
+  cmdChar = null; setEnabled(false);
+  $('badge').style.background = 'var(--st0)'; $('badge').innerHTML = '';
+  $('stText').textContent = "Déconnecté"; $('stSub').textContent = "Touchez « Connecter le cube »";
+}
+async function connect(){
+  showError("");
+  if (!navigator.bluetooth){
+    showError("Ce navigateur n'a pas le Bluetooth web. Sur iPhone, ouvrez cette page dans l'app gratuite Bluefy.");
+    return;
+  }
+  try{
+    device = await navigator.bluetooth.requestDevice({ filters:[{services:[SVC]}], optionalServices:['battery_service'] });
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+    const server = await device.gatt.connect();
+    const svc = await server.getPrimaryService(SVC);
+    cmdChar = await svc.getCharacteristic(CMD);
+    const stChar = await svc.getCharacteristic(STATUS);
+    stChar.addEventListener('characteristicvaluechanged', e => { const v=e.target.value; render(v.getUint8(0), v.getUint8(1), v.getUint8(2), v.getUint8(3)); });
+    await stChar.startNotifications();
+    const v = await stChar.readValue(); render(v.getUint8(0), v.getUint8(1), v.getUint8(2), v.getUint8(3));
+    setEnabled(true);
+    try { localStorage.setItem('cubeName', device.name || ''); } catch(e){}
+  }catch(e){
+    if (e.name !== 'NotFoundError') showError("Connexion impossible : " + e.message);
+  }
+}
+$('btnConnect').addEventListener('click', () => {
+  if (device && device.gatt.connected) device.gatt.disconnect(); else connect();
+});
+document.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => send(0x01, +b.dataset.st)));
+document.querySelectorAll('[data-learn]').forEach(b => b.addEventListener('click', () => send(0x05, +b.dataset.learn)));
+$('bri').addEventListener('input', e => $('briVal').textContent = e.target.value + " %");
+$('bri').addEventListener('change', e => send(0x03, +e.target.value));
+$('focus').addEventListener('change', e => send(0x04, +e.target.value));
+</script>
+</body>
+</html>
