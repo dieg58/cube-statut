@@ -23,6 +23,7 @@
 using namespace Adafruit_LittleFS_Namespace;
 
 // ---------------------------------------------------------------- reglages
+#define FW_VERSION        "1.1.0"   // lue par l'app (Device Information, Firmware Revision)
 #define NUM_LEDS          12
 #define PIN_LED_DATA      D0
 #define PIN_LED_POWER     D1        // LOW = anneau alimente (MOSFET P)
@@ -46,6 +47,7 @@ const uint8_t UUID_STATUS[16] = {0x00,0x4a,0x1b,0x8e,0x6d,0x2f,0x3a,0x9c,0x1d,0x
 const uint8_t UUID_CMD[16]    = {0x00,0x4a,0x1b,0x8e,0x6d,0x2f,0x3a,0x9c,0x1d,0x4b,0x7e,0x5a,0x02,0xe0,0x0b,0x7c};
 
 // --------------------------------------------------------------- objets
+BLEDfu            bledfu;                 // mise a jour du firmware par Bluetooth (OTA DFU)
 BLEService        svcCube(UUID_SVC);
 BLECharacteristic chrStatus(UUID_STATUS);
 BLECharacteristic chrCmd(UUID_CMD);
@@ -298,8 +300,11 @@ void setupBLE() {
   Bluefruit.Periph.setDisconnectCallback(onDisconnect);
   Bluefruit.Periph.setConnInterval(24, 80);  // 30-100 ms
 
+  bledfu.begin();                        // a declarer en premier (recommandation Adafruit)
+
   bledis.setManufacturer("DIY");
   bledis.setModel("Cube de statut v1");
+  bledis.setFirmwareRev(FW_VERSION);
   bledis.begin();
   blebas.begin();
   blebas.write(batteryPct);
