@@ -4,127 +4,258 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#14181f">
-<title>Cube de statut</title>
+<meta name="apple-mobile-web-app-title" content="kwartor">
+<meta name="theme-color" content="#F7F5F0">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>kwartor</title>
 <style>
+/* Polices auto-hebergees (SIL OFL, voir fonts/*-OFL.txt) */
+@font-face { font-family: 'Newsreader'; font-style: normal; font-weight: 200 800; font-display: swap; src: url('fonts/newsreader-latin-wght-normal.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-style: normal; font-weight: 100 900; font-display: swap; src: url('fonts/inter-latin-wght-normal.woff2') format('woff2'); }
+
+/* Tokens de la charte web Kwartor v1.0, valeurs reprises telles quelles */
 :root{
-  --bg:#f2f4f7; --card:#ffffff; --ink:#151a22; --muted:#5d6878; --line:#d8dee6;
-  --accent:#1f4fd1; --on-accent:#ffffff;
-  --st0:#6b7280; --st1:#0f9d58; --st2:#e08a00; --st3:#d42a2a; --st4:#7c3aed;
-  --f:"SF Pro Text",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --color-paper:#F7F5F0; --color-ink:#0B1B2B; --color-blue:#0072B2; --color-amber:#E69F00;
+  --color-muted:#52616D; --color-line:#DCE0DE; --color-control-border:#7A858D; --color-ink-hover:#263746;
+  --color-sky:#56B4E9;
+  --font-heading:'Newsreader',Georgia,serif;
+  --font-body:'Inter',system-ui,-apple-system,sans-serif;
+  --radius-control:8px; --radius-panel:12px;
+  --duration-ui:180ms; --duration-turn:420ms; --ease-turn:cubic-bezier(.22,1,.36,1);
+  /* Roles : s'inversent en mode disco */
+  --bg:var(--color-paper); --fg:var(--color-ink); --fg-muted:var(--color-muted);
+  --line:var(--color-line); --control:var(--color-control-border);
+  --primary-bg:var(--color-ink); --primary-fg:var(--color-paper); --primary-hover:var(--color-ink-hover);
+  --sign-available:var(--color-blue); --sign-focus:var(--color-amber); --sign-call:var(--color-ink);
 }
-@media (prefers-color-scheme: dark){:root{
-  --bg:#0f1318; --card:#181e26; --ink:#eef2f6; --muted:#9aa5b4; --line:#2a333f; --accent:#8fb0ff; --on-accent:#0f1318; color-scheme:dark}}
-*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--f)}
-body{padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
-main{max-width:480px;margin:0 auto;display:grid;gap:16px}
-h1{font-size:1.35rem;margin:4px 0 0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:grid;gap:12px}
-.label{font:600 .72rem var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
-.state{display:flex;align-items:center;gap:14px}
-.badge{width:64px;height:64px;border-radius:16px;display:grid;place-items:center;background:var(--st0);flex:none;transition:background .3s}
-.badge svg{width:34px;height:34px;stroke:#fff;fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
-.state b{font-size:1.4rem;display:block}
-.state span{color:var(--muted);font-size:.9rem}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-button{font:600 1rem var(--f);border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:14px 12px;display:flex;align-items:center;gap:10px;justify-content:center;min-height:56px;cursor:pointer}
-button:disabled{opacity:.45}
-button.primary{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
-button .dot{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;flex:none}
-button .dot svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
-button[aria-pressed="true"]{outline:3px solid var(--accent);outline-offset:1px}
-.full{grid-column:1/-1}
-.row{display:flex;justify-content:space-between;align-items:center;gap:12px}
-input[type=range]{width:100%}
-select{font:inherit;padding:10px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
-.note{color:var(--muted);font-size:.88rem;margin:0}
-.err{color:var(--st3);font-size:.9rem;margin:0}
-details summary{cursor:pointer;font-weight:600}
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{color-scheme:light}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:var(--font-body); font-size:1rem; line-height:1.55; font-optical-sizing:auto;
+  min-height:100vh; min-height:100dvh; overflow-x:clip;
+  padding:max(20px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(28px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left));
+  transition:background-color var(--duration-turn) var(--ease-turn), color var(--duration-turn) var(--ease-turn);
+}
+button,input,select{font:inherit;color:inherit}
+main{position:relative;z-index:2;max-width:480px;margin:0 auto;display:grid;gap:32px;transition:padding-top 700ms var(--ease-turn)}
+h1,h2{margin:0;font-family:var(--font-heading);font-weight:400;letter-spacing:-.025em;text-wrap:balance}
+p{margin:0}
+:focus-visible{outline:2px solid var(--color-blue);outline-offset:3px}
+
+.app-header{display:flex;align-items:center;justify-content:space-between;min-height:44px}
+.wordmark{display:block;width:128px;aspect-ratio:266/54;background-color:var(--fg);
+  -webkit-mask:url('kwartor-wordmark.png') left center/contain no-repeat;mask:url('kwartor-wordmark.png') left center/contain no-repeat;
+  transition:background-color var(--duration-turn) var(--ease-turn)}
+.link-state{font-size:.8125rem;line-height:1.45;color:var(--fg-muted)}
+
+.now{display:grid;gap:20px}
+.now__state{display:flex;align-items:center;gap:16px;min-height:72px}
+.now__sign{flex:none;width:48px;height:48px;color:var(--fg-muted)}
+.now__sign svg{width:100%;height:100%;display:block}
+.now__text h1{font-size:2.5rem;line-height:1.04}
+.now__text p{font-size:.875rem;line-height:1.45;color:var(--fg-muted);margin-top:4px}
+
+.button{min-height:52px;width:100%;display:inline-flex;justify-content:center;align-items:center;gap:12px;
+  padding:12px 24px;border:1px solid var(--primary-bg);border-radius:var(--radius-control);
+  font-size:.9375rem;font-weight:500;line-height:1.3;cursor:pointer;background:transparent;color:var(--fg);
+  transition:background-color var(--duration-ui),color var(--duration-ui),border-color var(--duration-ui)}
+.button--primary{background:var(--primary-bg);color:var(--primary-fg)}
+.button--primary:hover{background:var(--primary-hover)}
+.button:disabled{cursor:not-allowed;background:transparent;color:var(--fg-muted);border-color:var(--control)}
+
+.notice{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--control);border-radius:var(--radius-panel);padding:16px;font-size:.9375rem;line-height:1.5}
+.notice svg{flex:none;width:20px;height:20px;margin-top:2px}
+.notice[hidden]{display:none}
+
+.eyebrow{font-size:.875rem;font-weight:500;line-height:1.3;color:var(--fg-muted);margin-bottom:12px}
+.choices{list-style:none;margin:0;padding:0;border-bottom:1px solid var(--line)}
+.choices li{border-top:1px solid var(--line)}
+.choice{width:100%;min-height:64px;display:flex;align-items:center;gap:16px;padding:12px 12px 12px 14px;
+  background:transparent;border:0;border-left:2px solid transparent;border-radius:0;text-align:left;cursor:pointer;
+  font-size:1.0625rem;font-weight:500;line-height:1.3;
+  transition:border-color var(--duration-ui),background-color var(--duration-ui)}
+.choice svg{flex:none;width:24px;height:24px}
+.choice small{display:block;font-size:.8125rem;font-weight:400;color:var(--fg-muted);margin-top:2px}
+.choice[aria-pressed="true"]{border-left-color:var(--fg)}
+.choice:disabled{cursor:not-allowed;color:var(--fg-muted)}
+.choice:disabled [data-icon]{color:var(--fg-muted)}
+.sign--available{color:var(--sign-available)}
+.sign--focus{color:var(--sign-focus)}
+.sign--call{color:var(--sign-call)}
+.sign--off,.sign--face{color:var(--fg-muted)}
+.sign--disco{color:var(--fg)}
+.caption{font-size:.8125rem;line-height:1.45;color:var(--fg-muted);margin-top:12px}
+
+.settings{display:grid;gap:20px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:.9375rem}
+.row output{color:var(--fg-muted)}
+.range{-webkit-appearance:none;appearance:none;width:100%;height:44px;margin:0;background:transparent;cursor:pointer}
+.range::-webkit-slider-runnable-track{height:1.5px;background:var(--fg)}
+.range::-moz-range-track{height:1.5px;background:var(--fg)}
+.range::-webkit-slider-thumb{-webkit-appearance:none;width:28px;height:28px;margin-top:-13.25px;border-radius:50%;background:var(--bg);border:1.5px solid var(--fg)}
+.range::-moz-range-thumb{width:28px;height:28px;box-sizing:border-box;border-radius:50%;background:var(--bg);border:1.5px solid var(--fg)}
+.range:disabled{cursor:not-allowed;opacity:.45}
+.field{min-height:48px;padding:10px 14px;border:1px solid var(--control);border-radius:var(--radius-control);background:var(--bg);color:var(--fg);font-size:1rem}
+.field:disabled{color:var(--fg-muted)}
+details{border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+details summary{cursor:pointer;min-height:64px;display:flex;align-items:center;justify-content:space-between;gap:16px;list-style:none;
+  font-family:var(--font-heading);font-size:1.375rem;line-height:1.2;letter-spacing:-.02em}
+details summary::-webkit-details-marker{display:none}
+details summary svg{flex:none;width:24px;height:24px;transition:transform var(--duration-ui)}
+details[open] summary svg{transform:rotate(45deg)}
+details .inner{display:grid;gap:12px;padding-bottom:24px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid2 .button{min-height:48px;padding:10px 12px}
+
+.app-footer{border-top:1px solid var(--line);padding-top:20px}
+.tagline{font-family:var(--font-heading);font-size:1.375rem;line-height:1.15;letter-spacing:-.02em}
+
+/* ============ Mode disco ============ */
+body.disco{
+  --bg:var(--color-ink); --fg:var(--color-paper); --fg-muted:#AEB8C0;
+  --line:#33475A; --control:#7A858D;
+  --primary-bg:var(--color-paper); --primary-fg:var(--color-ink); --primary-hover:#FFFFFF;
+  --sign-available:var(--color-sky); --sign-call:var(--color-paper);
+}
+body.disco main{padding-top:188px}
+body.disco :focus-visible{outline-color:var(--color-sky)}
+.disco-stage{position:fixed;inset:0;z-index:1;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 500ms linear}
+body.disco .disco-stage{opacity:1}
+.spot{position:absolute;left:0;top:0;border-radius:50%;opacity:.5;filter:blur(7px);mix-blend-mode:screen;will-change:transform}
+.spot i{display:block;width:100%;height:100%;border-radius:50%;background:currentColor}
+.disco-ball{position:fixed;left:50%;top:0;z-index:3;width:132px;margin-left:-66px;pointer-events:none;
+  transform:translateY(-260px);transition:transform 1100ms cubic-bezier(.3,1.35,.5,1)}
+body.disco .disco-ball{transform:translateY(0)}
+.disco-ball__string{width:1.5px;height:calc(max(20px,env(safe-area-inset-top)) + 22px);margin:0 auto;background:var(--color-paper)}
+.disco-ball__cap{width:18px;height:7px;margin:0 auto -2px;border-radius:2px 2px 0 0;background:#AEB8C0}
+.disco-ball canvas{display:block;width:132px;height:132px}
+@keyframes sweep-x{from{transform:translateX(-25vw)}to{transform:translateX(125vw)}}
+@keyframes sweep-y{from{transform:translateY(0)}to{transform:translateY(var(--dy))}}
+@keyframes glow{0%,100%{border-color:var(--color-sky)}33%{border-color:var(--color-amber)}66%{border-color:var(--color-paper)}}
+body.disco .spot{animation:sweep-x var(--dur) linear infinite;animation-delay:var(--delay)}
+body.disco .spot i{animation:sweep-y calc(var(--dur) * .5) ease-in-out infinite alternate;animation-delay:var(--delay)}
+body.disco .choices,body.disco .choices li,body.disco details,body.disco .app-footer{animation:glow 3.6s linear infinite}
+body.disco .choice[data-st="4"]{border-left-color:var(--color-amber)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition-duration:.01ms !important}
+  body.disco .spot{transform:translateX(var(--rx))}
+}
 </style>
 </head>
 <body>
+<div class="disco-stage" id="stage" aria-hidden="true"></div>
+<div class="disco-ball" aria-hidden="true">
+  <div class="disco-ball__string"></div>
+  <div class="disco-ball__cap"></div>
+  <canvas id="ball" width="264" height="264"></canvas>
+</div>
+
 <main>
-  <h1>Cube de statut</h1>
+  <header class="app-header">
+    <span class="wordmark" role="img" aria-label="kwartor"></span>
+    <span class="link-state" id="linkState">Non connecté</span>
+  </header>
 
-  <section class="card" aria-live="polite">
-    <div class="state">
-      <div class="badge" id="badge"></div>
-      <div><b id="stText">Non connecté</b><span id="stSub">Touchez « Connecter le cube »</span></div>
+  <section class="now" aria-live="polite">
+    <div class="now__state">
+      <div class="now__sign" id="nowSign"></div>
+      <div class="now__text"><h1 id="stText">Aucun cube</h1><p id="stSub">Touchez « Connecter le cube »</p></div>
     </div>
-    <button class="primary" id="btnConnect">Connecter le cube</button>
-    <p class="err" id="err" hidden></p>
+    <button class="button button--primary" id="btnConnect">Connecter le cube</button>
+    <p class="notice" id="err" hidden></p>
   </section>
 
-  <section class="card">
-    <div class="label">Choisir un statut</div>
-    <div class="grid" id="statusButtons">
-      <button data-st="1" disabled><span class="dot" style="background:var(--st1)"></span>Disponible</button>
-      <button data-st="2" disabled><span class="dot" style="background:var(--st2)"></span>Concentré</button>
-      <button data-st="3" disabled><span class="dot" style="background:var(--st3)"></span>En appel</button>
-      <button data-st="0" disabled><span class="dot" style="background:var(--st0)"></span>Face du cube</button>
-      <button data-st="4" class="full" disabled><span class="dot" style="background:var(--st4)"></span>Mode disco</button>
-    </div>
-    <p class="note">Retourner le cube annule toujours un choix fait ici. Le mode disco se quitte aussi avec « Face du cube ».</p>
+  <section>
+    <p class="eyebrow">Choisir un statut</p>
+    <ul class="choices" id="statusButtons">
+      <li><button class="choice" data-st="1" aria-pressed="false" disabled><span class="sign--available" data-icon="1"></span><span>Disponible</span></button></li>
+      <li><button class="choice" data-st="2" aria-pressed="false" disabled><span class="sign--focus" data-icon="2"></span><span>Concentration</span></button></li>
+      <li><button class="choice" data-st="3" aria-pressed="false" disabled><span class="sign--call" data-icon="3"></span><span>En appel</span></button></li>
+      <li><button class="choice" data-st="0" aria-pressed="false" disabled><span class="sign--face" data-icon="face"></span><span>Face du cube<small>Rend la main au cube</small></span></button></li>
+      <li><button class="choice" data-st="4" aria-pressed="false" disabled><span class="sign--disco" data-icon="4"></span><span>Mode disco<small>Pour la fin de journée</small></span></button></li>
+    </ul>
+    <p class="caption">Retourner le cube annule toujours un choix fait ici.</p>
   </section>
 
-  <section class="card">
-    <div class="label">Réglages</div>
-    <div class="row"><span>Luminosité</span><span id="briVal">25 %</span></div>
-    <input type="range" id="bri" min="5" max="40" step="5" value="25" disabled>
-    <div class="row"><span>Durée du mode concentré</span>
-      <select id="focus" disabled>
+  <section class="settings">
+    <p class="eyebrow" style="margin-bottom:0">Réglages</p>
+    <div>
+      <div class="row"><label for="bri">Luminosité</label><output id="briVal" for="bri">25 %</output></div>
+      <input class="range" type="range" id="bri" min="5" max="40" step="5" value="25" disabled>
+    </div>
+    <div class="row"><label for="focus">Durée de la concentration</label>
+      <select class="field" id="focus" disabled>
         <option value="30">30 min</option><option value="60" selected>1 h</option>
         <option value="90">1 h 30</option><option value="120">2 h</option>
       </select>
     </div>
     <details>
-      <summary>Programmer les faces du cube</summary>
-      <p class="note">Posez le cube sur la face à programmer, attendez une seconde, puis touchez le statut qu'elle doit afficher.</p>
-      <div class="grid" id="learnButtons">
-        <button data-learn="1" disabled>Disponible</button>
-        <button data-learn="2" disabled>Concentré</button>
-        <button data-learn="3" disabled>En appel</button>
-        <button data-learn="0" disabled>Éteint</button>
+      <summary>Programmer les faces<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></summary>
+      <div class="inner">
+        <p class="caption" style="margin-top:0">Posez le cube sur la face à programmer, attendez une seconde, puis touchez le statut qu'elle doit afficher.</p>
+        <div class="grid2" id="learnButtons">
+          <button class="button" data-learn="1" disabled>Disponible</button>
+          <button class="button" data-learn="2" disabled>Concentration</button>
+          <button class="button" data-learn="3" disabled>En appel</button>
+          <button class="button" data-learn="0" disabled>Éteint</button>
+        </div>
       </div>
     </details>
   </section>
+
+  <footer class="app-footer">
+    <p class="tagline">A quarter turn, and they know.</p>
+  </footer>
 </main>
 
 <script>
 const SVC = "7c0be000-5a7e-4b1d-9c3a-2f6d8e1b4a00";
 const STATUS = "7c0be001-5a7e-4b1d-9c3a-2f6d8e1b4a00";
 const CMD = "7c0be002-5a7e-4b1d-9c3a-2f6d8e1b4a00";
-const NAMES = ["Éteint","Disponible","Concentré","En appel","Disco"];
+const NAMES = ["Éteint","Disponible","Concentration","En appel","Disco"];
+const SIGN_CLASS = ["sign--off","sign--available","sign--focus","sign--call","sign--disco"];
 const SOURCES = ["face posée","choix manuel","appel détecté par l'ordinateur"];
-const ICONS = [
-  '<svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>',
-  '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-  '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/></svg>',
-  '<svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5"/></svg>',
-  '<svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>'
-];
-document.querySelectorAll('[data-st] .dot').forEach(d=>{ d.innerHTML = ICONS[+d.parentElement.dataset.st]; });
+const svg = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
+/* Signes de la charte : cercle ouvert, croissant, telephone. Jamais la couleur seule. */
+const ICONS = {
+  0: svg('<path d="M6 12h12"/>'),
+  1: svg('<circle cx="12" cy="12" r="8"/>'),
+  2: svg('<path d="M15.5 4.2A8 8 0 1 0 19.8 15.5 6.5 6.5 0 0 1 15.5 4.2Z" fill="currentColor"/>'),
+  3: svg('<path d="M5 4.5h3l1.5 4-2 1.3a10 10 0 0 0 6.7 6.7l1.3-2 4 1.5v3a1.5 1.5 0 0 1-1.6 1.5A15.5 15.5 0 0 1 3.5 6.1 1.5 1.5 0 0 1 5 4.5Z"/>'),
+  4: svg('<path d="M12 2v3.5"/><circle cx="12" cy="13.5" r="8"/><path d="M4 13.5h16M5.3 9.5h13.4M5.3 17.5h13.4"/><ellipse cx="12" cy="13.5" rx="3.6" ry="8"/>'),
+  face: svg('<g transform="translate(-4 -4)"><path d="M21 7.5H11.5A4 4 0 0 0 7.5 11.5v9a4 4 0 0 0 4 4h9a4 4 0 0 0 4-4V13"/></g>'),
+  info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>')
+};
+document.querySelectorAll('[data-icon]').forEach(el => { el.innerHTML = ICONS[el.dataset.icon]; el.style.display = 'inline-flex'; });
 
 const $ = id => document.getElementById(id);
-let device = null, cmdChar = null, current = null;
+let device = null, cmdChar = null;
 
-function showError(msg){ const e=$('err'); e.textContent = msg; e.hidden = !msg; }
+function showError(msg){
+  const e = $('err');
+  e.innerHTML = msg ? ICONS.info + '<span></span>' : '';
+  if (msg) e.lastChild.textContent = msg;
+  e.hidden = !msg;
+}
 function setEnabled(on){
   document.querySelectorAll('[data-st],[data-learn],#bri,#focus').forEach(el => el.disabled = !on);
   $('btnConnect').textContent = on ? "Déconnecter" : "Connecter le cube";
+  $('btnConnect').classList.toggle('button--primary', !on);
+  $('linkState').textContent = on ? (device && device.name ? device.name : "Connecté") : "Non connecté";
 }
 function render(st, src, bat, flags){
-  current = st;
-  $('badge').style.background = `var(--st${ICONS[st] ? st : 0})`;
-  $('badge').innerHTML = ICONS[st] ?? '';
-  $('stText').textContent = NAMES[st] ?? "?";
+  const known = st >= 0 && st < NAMES.length;
+  $('nowSign').className = 'now__sign ' + (known ? SIGN_CLASS[st] : 'sign--off');
+  $('nowSign').innerHTML = known ? ICONS[st] : ICONS[0];
+  $('stText').textContent = known ? NAMES[st] : "?";
   let sub = SOURCES[src] ?? "";
   if (bat !== undefined) sub += ` · batterie ${bat} %` + ((flags & 1) ? " (en charge)" : "");
-  if (flags & 4) sub += " · concentré terminé";
+  if (flags & 4) sub += " · concentration terminée";
   $('stSub').textContent = sub;
-  document.querySelectorAll('[data-st]').forEach(b => b.setAttribute('aria-pressed', src===1 && +b.dataset.st===st ? "true":"false"));
+  document.querySelectorAll('[data-st]').forEach(b => b.setAttribute('aria-pressed', src === 1 && +b.dataset.st === st ? "true" : "false"));
+  setDisco(st === 4);
 }
 async function send(cmd, val){
   if (!cmdChar) return;
@@ -132,9 +263,10 @@ async function send(cmd, val){
   catch(e){ try { await cmdChar.writeValue(new Uint8Array([cmd, val])); } catch(e2){ showError("Envoi impossible : " + e2.message); } }
 }
 function onDisconnected(){
-  cmdChar = null; setEnabled(false);
-  $('badge').style.background = 'var(--st0)'; $('badge').innerHTML = '';
+  cmdChar = null; setEnabled(false); setDisco(false);
+  $('nowSign').className = 'now__sign sign--off'; $('nowSign').innerHTML = '';
   $('stText').textContent = "Déconnecté"; $('stSub').textContent = "Touchez « Connecter le cube »";
+  document.querySelectorAll('[data-st]').forEach(b => b.setAttribute('aria-pressed', "false"));
 }
 async function connect(){
   showError("");
@@ -149,10 +281,10 @@ async function connect(){
     const svc = await server.getPrimaryService(SVC);
     cmdChar = await svc.getCharacteristic(CMD);
     const stChar = await svc.getCharacteristic(STATUS);
-    stChar.addEventListener('characteristicvaluechanged', e => { const v=e.target.value; render(v.getUint8(0), v.getUint8(1), v.getUint8(2), v.getUint8(3)); });
+    stChar.addEventListener('characteristicvaluechanged', e => { const v = e.target.value; render(v.getUint8(0), v.getUint8(1), v.getUint8(2), v.getUint8(3)); });
     await stChar.startNotifications();
-    const v = await stChar.readValue(); render(v.getUint8(0), v.getUint8(1), v.getUint8(2), v.getUint8(3));
     setEnabled(true);
+    const v = await stChar.readValue(); render(v.getUint8(0), v.getUint8(1), v.getUint8(2), v.getUint8(3));
     try { localStorage.setItem('cubeName', device.name || ''); } catch(e){}
   }catch(e){
     if (e.name !== 'NotFoundError') showError("Connexion impossible : " + e.message);
@@ -161,11 +293,79 @@ async function connect(){
 $('btnConnect').addEventListener('click', () => {
   if (device && device.gatt.connected) device.gatt.disconnect(); else connect();
 });
-document.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => send(0x01, +b.dataset.st)));
+document.querySelectorAll('[data-st]').forEach(b => b.addEventListener('click', () => {
+  const st = +b.dataset.st;
+  if (st === 4) setDisco(true);          // effet immediat ; le cube confirme ensuite par son statut
+  send(0x01, st);
+}));
 document.querySelectorAll('[data-learn]').forEach(b => b.addEventListener('click', () => send(0x05, +b.dataset.learn)));
 $('bri').addEventListener('input', e => $('briVal').textContent = e.target.value + " %");
 $('bri').addEventListener('change', e => send(0x03, +e.target.value));
 $('focus').addEventListener('change', e => send(0x04, +e.target.value));
+
+/* ---------------- Mode disco : la boule descend, tourne, et l'app s'illumine ---------------- */
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const BRAND = { blue:[0,114,178], amber:[230,159,0], sky:[86,180,233], paper:[247,245,240] };
+const stage = $('stage');
+(function buildSpots(){
+  const colors = ['#56B4E9','#E69F00','#F7F5F0','#0072B2','#56B4E9','#E69F00','#F7F5F0','#56B4E9','#E69F00','#F7F5F0','#56B4E9','#E69F00','#F7F5F0','#0072B2'];
+  colors.forEach((c, i) => {
+    const s = document.createElement('div'); s.className = 'spot';
+    const size = 46 + ((i * 37) % 70);
+    const dur = 7 + ((i * 5) % 8);
+    s.style.cssText = `width:${size}px;height:${size}px;top:${(i * 29) % 92}vh;color:${c};--dur:${dur}s;--delay:-${(i * 1.9).toFixed(1)}s;--dy:${(i % 2 ? -1 : 1) * (10 + (i * 7) % 22)}vh;--rx:${(i * 23) % 90}vw`;
+    s.appendChild(document.createElement('i'));
+    stage.appendChild(s);
+  });
+})();
+
+const ball = $('ball'), ctx = ball.getContext('2d');
+let discoOn = false, raf = 0;
+const hash = (a, b, c) => { let h = (a * 374761393 + b * 668265263 + c * 2147483647) | 0; h = (h ^ (h >>> 13)) * 1274126177 | 0; return ((h ^ (h >>> 16)) >>> 0) / 4294967295; };
+const mix = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+function drawBall(t){
+  const W = ball.width, R = W / 2 - 4, cx = W / 2, cy = W / 2;
+  ctx.clearRect(0, 0, W, W);
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fillStyle = '#0B1B2B'; ctx.fill();
+  const rot = t * 0.0009, LAT = 11, L = [-0.42, -0.62, 0.66], tick = Math.floor(t / 420);
+  const P = (phi, th) => [Math.cos(phi) * Math.sin(th), Math.sin(phi), Math.cos(phi) * Math.cos(th)];
+  for (let i = 0; i < LAT; i++){
+    const p0 = -Math.PI / 2 + Math.PI * i / LAT, p1 = -Math.PI / 2 + Math.PI * (i + 1) / LAT, pm = (p0 + p1) / 2;
+    const M = Math.max(5, Math.round(24 * Math.cos(pm)));
+    for (let j = 0; j < M; j++){
+      const t0 = rot + 2 * Math.PI * j / M, t1 = rot + 2 * Math.PI * (j + 1) / M, tm = (t0 + t1) / 2;
+      const n = P(pm, tm);
+      if (n[2] <= 0.02) continue;
+      const lit = Math.max(0, n[0] * L[0] + n[1] * L[1] + n[2] * L[2]);
+      let col = mix([30, 50, 70], [150, 168, 182], Math.min(1, 0.15 + lit * 0.95));
+      const r = hash(i, j, 7);
+      if (r < 0.16) col = mix(col, BRAND.sky, 0.65);
+      else if (r < 0.30) col = mix(col, BRAND.amber, 0.7);
+      else if (r < 0.38) col = mix(col, BRAND.blue, 0.6);
+      if (lit > 0.9 || hash(i, j, tick) > 0.955) col = BRAND.paper;
+      const q = [P(p0, t0), P(p0, t1), P(p1, t1), P(p1, t0)];
+      ctx.beginPath();
+      q.forEach((c, k) => {
+        const x = cx + (c[0] * 0.94 + n[0] * 0.06) * R, y = cy + (c[1] * 0.94 + n[1] * 0.06) * R;
+        k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      });
+      ctx.closePath();
+      ctx.fillStyle = `rgb(${col[0] | 0},${col[1] | 0},${col[2] | 0})`;
+      ctx.fill();
+    }
+  }
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.lineWidth = 3; ctx.strokeStyle = '#F7F5F0'; ctx.stroke();
+}
+function loop(t){ drawBall(t); if (discoOn) raf = requestAnimationFrame(loop); }
+function setDisco(on){
+  if (on === discoOn) return;
+  discoOn = on;
+  document.body.classList.toggle('disco', on);
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', on ? '#0B1B2B' : '#F7F5F0');
+  cancelAnimationFrame(raf);
+  if (on){ if (reduceMotion) drawBall(0); else raf = requestAnimationFrame(loop); }
+}
+drawBall(0);
 </script>
 </body>
 </html>
