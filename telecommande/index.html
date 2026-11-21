@@ -10,7 +10,7 @@
 :root{
   --bg:#f2f4f7; --card:#ffffff; --ink:#151a22; --muted:#5d6878; --line:#d8dee6;
   --accent:#1f4fd1; --on-accent:#ffffff;
-  --st0:#6b7280; --st1:#0f9d58; --st2:#e08a00; --st3:#d42a2a;
+  --st0:#6b7280; --st1:#0f9d58; --st2:#e08a00; --st3:#d42a2a; --st4:#7c3aed;
   --f:"SF Pro Text",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
@@ -64,8 +64,9 @@ details summary{cursor:pointer;font-weight:600}
       <button data-st="2" disabled><span class="dot" style="background:var(--st2)"></span>Concentré</button>
       <button data-st="3" disabled><span class="dot" style="background:var(--st3)"></span>En appel</button>
       <button data-st="0" disabled><span class="dot" style="background:var(--st0)"></span>Face du cube</button>
+      <button data-st="4" class="full" disabled><span class="dot" style="background:var(--st4)"></span>Mode disco</button>
     </div>
-    <p class="note">Retourner le cube annule toujours un choix fait ici.</p>
+    <p class="note">Retourner le cube annule toujours un choix fait ici. Le mode disco se quitte aussi avec « Face du cube ».</p>
   </section>
 
   <section class="card">
@@ -95,13 +96,14 @@ details summary{cursor:pointer;font-weight:600}
 const SVC = "7c0be000-5a7e-4b1d-9c3a-2f6d8e1b4a00";
 const STATUS = "7c0be001-5a7e-4b1d-9c3a-2f6d8e1b4a00";
 const CMD = "7c0be002-5a7e-4b1d-9c3a-2f6d8e1b4a00";
-const NAMES = ["Éteint","Disponible","Concentré","En appel"];
+const NAMES = ["Éteint","Disponible","Concentré","En appel","Disco"];
 const SOURCES = ["face posée","choix manuel","appel détecté par l'ordinateur"];
 const ICONS = [
   '<svg viewBox="0 0 24 24"><path d="M6 12h12"/></svg>',
   '<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5"/></svg>',
-  '<svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5"/></svg>'
+  '<svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6 11a6 6 0 0 0 12 0M12 17v3.5"/></svg>',
+  '<svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M18.4 5.6l-2.8 2.8M8.4 15.6l-2.8 2.8"/></svg>'
 ];
 document.querySelectorAll('[data-st] .dot').forEach(d=>{ d.innerHTML = ICONS[+d.parentElement.dataset.st]; });
 
@@ -115,8 +117,8 @@ function setEnabled(on){
 }
 function render(st, src, bat, flags){
   current = st;
-  $('badge').style.background = `var(--st${st})`;
-  $('badge').innerHTML = ICONS[st];
+  $('badge').style.background = `var(--st${ICONS[st] ? st : 0})`;
+  $('badge').innerHTML = ICONS[st] ?? '';
   $('stText').textContent = NAMES[st] ?? "?";
   let sub = SOURCES[src] ?? "";
   if (bat !== undefined) sub += ` · batterie ${bat} %` + ((flags & 1) ? " (en charge)" : "");

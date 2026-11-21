@@ -23,7 +23,7 @@ SVC_UUID = "7c0be000-5a7e-4b1d-9c3a-2f6d8e1b4a00"
 STATUS_UUID = "7c0be001-5a7e-4b1d-9c3a-2f6d8e1b4a00"
 CMD_UUID = "7c0be002-5a7e-4b1d-9c3a-2f6d8e1b4a00"
 
-STATUS_LABEL = {0: "Éteint", 1: "Disponible", 2: "Concentré", 3: "En appel"}
+STATUS_LABEL = {0: "Éteint", 1: "Disponible", 2: "Concentré", 3: "En appel", 4: "Disco"}
 SOURCE_LABEL = {0: "face posée", 1: "choix manuel", 2: "appel détecté"}
 STATUS_RGB = {None: (140, 140, 140), 0: (90, 90, 90), 1: (0, 170, 70), 2: (240, 140, 0), 3: (220, 30, 30)}
 

@@ -18,7 +18,7 @@ Nom diffusé : `Cube-Statut-XXXX` (XXXX = fin de l'adresse Bluetooth).
 
 | Octet | Contenu |
 |---|---|
-| 0 | Statut affiché : 0 éteint, 1 disponible, 2 concentré, 3 en appel |
+| 0 | Statut affiché : 0 éteint, 1 disponible, 2 concentré, 3 en appel, 4 disco |
 | 1 | Origine : 0 face posée, 1 choix manuel à distance, 2 détection automatique d'appel |
 | 2 | Batterie en % (0-100) |
 | 3 | Drapeaux : bit0 en charge, bit1 appel détecté actif, bit2 concentré expiré |
@@ -27,7 +27,7 @@ Nom diffusé : `Cube-Statut-XXXX` (XXXX = fin de l'adresse Bluetooth).
 
 | Commande | Valeur | Effet |
 |---|---|---|
-| `0x01` | 0-3 | Statut manuel à distance. 0 = annuler et revenir à la face posée |
+| `0x01` | 0-4 | Statut manuel à distance. 0 = annuler et revenir à la face posée. 4 = mode disco (à distance uniquement, aucune face ne peut l'afficher) |
 | `0x02` | 0/1 | Appel détecté par l'ordinateur. À renvoyer toutes les 10 s : sans rafraîchissement pendant 30 s, le cube l'oublie |
 | `0x03` | 5-40 | Luminosité maximale en % |
 | `0x04` | 1-240 | Durée du mode concentré en minutes (défaut 60) |

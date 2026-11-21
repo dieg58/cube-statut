@@ -36,7 +36,7 @@ using namespace Adafruit_LittleFS_Namespace;
 #define FACE_DEBOUNCE_MS     600    // la face doit etre stable aussi longtemps
 #define FACE_MIN_G           0.75f  // composante minimale de la gravite
 
-enum Status : uint8_t { ST_OFF = 0, ST_AVAILABLE = 1, ST_FOCUS = 2, ST_CALL = 3 };
+enum Status : uint8_t { ST_OFF = 0, ST_AVAILABLE = 1, ST_FOCUS = 2, ST_CALL = 3, ST_DISCO = 4 };  // disco : a distance seulement
 enum Source : uint8_t { SRC_FACE = 0, SRC_REMOTE = 1, SRC_AUTO = 2 };
 
 // UUID (ordre des octets inverse, format Bluefruit)
@@ -198,6 +198,7 @@ void publishStatus(uint8_t st, uint8_t src) {
 // --------------------------------------------------------------- LED
 // Chaque statut a sa couleur ET son mouvement, lisible sans distinguer les couleurs :
 //   disponible = vert fixe, concentre = ambre qui respire, en appel = rouge avec un point qui tourne
+//   disco = couleurs qui changent en rythme (choix a distance uniquement)
 void ledPower(bool on) {
   if (on == ledsPowered) return;
   if (on) { digitalWrite(PIN_LED_POWER, LOW); delay(2); }
@@ -232,6 +233,36 @@ void renderLeds(uint8_t st, uint32_t now) {
       }
       break;
     }
+    case ST_DISCO: {
+      // 120 battements par minute (2 Hz, sous le seuil des 3 eclairs par seconde).
+      // Trois figures qui alternent toutes les 8 battements.
+      const uint32_t BEAT_MS = 500;
+      uint32_t beat  = now / BEAT_MS;
+      float    inBeat = (now % BEAT_MS) / (float)BEAT_MS;      // 0..1 dans le battement
+      float    pulse = 1.0f - 0.65f * inBeat;                  // coup sur le temps, puis retombee
+      uint8_t  figure = (beat / 8) % 3;
+      uint16_t baseHue = (uint16_t)(beat * 9362UL);            // saut de couleur a chaque battement
+      for (int i = 0; i < NUM_LEDS; i++) {
+        uint16_t hue; float k;
+        if (figure == 0) {                                     // arc-en-ciel qui tourne
+          hue = (uint16_t)(now * 40UL) + (uint16_t)(i * (65536UL / NUM_LEDS));
+          k = 0.45f + 0.55f * pulse;
+        } else if (figure == 1) {                              // anneau entier, une couleur par battement
+          hue = baseHue;
+          k = pulse;
+        } else {                                               // deux points opposes qui tournent
+          float pos = (now % 1000) / 1000.0f * NUM_LEDS;
+          float d = fabsf(i - pos); if (d > NUM_LEDS / 2) d = NUM_LEDS - d;
+          float d2 = fabsf(d - NUM_LEDS / 2.0f);
+          float near = max(0.0f, 1.0f - min(d, d2) / 1.5f);
+          hue = baseHue + (d < d2 ? 0 : 32768);
+          k = 0.12f + 0.88f * near;
+        }
+        uint8_t v = (uint8_t)(255.0f * k * cfg.brightness / 100.0f);
+        ring.setPixelColor(i, ring.ColorHSV(hue, 255, v));
+      }
+      break;
+    }
   }
   // batterie faible : une LED clignote en blanc 0.2 s toutes les 10 s
   if (batteryPct <= 10 && !charging && (now % 10000) < 200) ring.setPixelColor(0, scaled(255, 255, 255, 1.0f));
@@ -244,7 +275,7 @@ void onCommand(uint16_t conn, BLECharacteristic *chr, uint8_t *data, uint16_t le
   if (len < 1) return;
   uint8_t cmd = data[0], val = len > 1 ? data[1] : 0;
   switch (cmd) {
-    case 0x01: remoteStatus = (val >= 1 && val <= 3) ? (int8_t)val : -1; break;
+    case 0x01: remoteStatus = (val >= 1 && val <= 4) ? (int8_t)val : -1; break;   // 4 = disco
     case 0x02: autoCall = val != 0; autoCallSeen = millis(); break;
     case 0x03: cfg.brightness = constrain(val, 5, MAX_BRIGHTNESS); cfgDirty = true; break;
     case 0x04: cfg.focusMinutes = constrain(val, 1, 240); cfgDirty = true; break;
