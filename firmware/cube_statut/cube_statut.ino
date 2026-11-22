@@ -49,6 +49,7 @@ const uint8_t UUID_STATUS[16] = {0x00,0x4a,0x1b,0x8e,0x6d,0x2f,0x3a,0x9c,0x1d,0x
 const uint8_t UUID_CMD[16]    = {0x00,0x4a,0x1b,0x8e,0x6d,0x2f,0x3a,0x9c,0x1d,0x4b,0x7e,0x5a,0x02,0xe0,0x0b,0x7c};
 
 // --------------------------------------------------------------- objets
+BLEDfu            bledfu;     // mise a jour sans fil (DFU OTA du bootloader Adafruit)
 BLEService        svcCube(UUID_SVC);
 BLECharacteristic chrStatus(UUID_STATUS);
 BLECharacteristic chrCmd(UUID_CMD);
@@ -397,6 +398,11 @@ void setupBLE() {
   Bluefruit.Periph.setConnectCallback(onConnect);
   Bluefruit.Periph.setDisconnectCallback(onDisconnect);
   Bluefruit.Periph.setConnInterval(24, 80);  // 30-100 ms
+
+  // Service DFU : permet de flasher les versions suivantes par Bluetooth
+  // (app nRF Device Firmware Update ou Bluefruit Connect, paquet .zip).
+  // Prototype : DFU non signe. Pour la serie, voir PROTOCOLE.md (DFU signe).
+  bledfu.begin();
 
   bledis.setManufacturer("DIY");
   bledis.setModel("Cube de statut v1");

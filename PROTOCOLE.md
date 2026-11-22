@@ -60,3 +60,11 @@ Le mode concentré repasse en disponible après la durée réglée, jusqu'au pro
 - Chaque changement de phase est signalé par 3 impulsions blanches lentes (2,4 s).
 - Un appel détecté s'affiche par-dessus sans arrêter le minuteur.
 - Retourner le cube, choisir un statut à distance (`0x01`) ou envoyer `[0x07, 0]` arrête la session. Après la longue pause, la session se termine et le cube revient à la face posée.
+
+## Mise à jour sans fil (DFU)
+
+- Le firmware expose le service DFU standard du bootloader Adafruit (`BLEDfu`). Il faut l'avoir flashé une fois par USB ; ensuite les versions suivantes passent par Bluetooth.
+- Paquet : `.zip` généré à partir du `.hex` compilé (`adafruit-nrfutil dfu genpkg --dev-type 0x0052 --sd-req 0x0123 --application cube_statut.hex cube_statut.zip`).
+- Outil sur iPhone pour l'instant : l'app gratuite nRF Device Firmware Update (Nordic) ou Bluefruit Connect. Cible : un bouton « Mettre à jour » dans la télécommande.
+- Une mise à jour interrompue laisse le cube en mode DFU : on relance l'envoi, il n'est pas bloqué. Il n'y a pas de retour automatique à l'ancienne version.
+- Limite du prototype : DFU non signé, n'importe qui à portée peut flasher le cube. Pour la série (carte KW-01) : bootloader avec DFU signé et entrée en mode mise à jour seulement après une action physique sur le cube.
