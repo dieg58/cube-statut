@@ -37,7 +37,10 @@ using namespace Adafruit_LittleFS_Namespace;
 #define FACE_MIN_G           0.75f  // composante minimale de la gravite
 
 enum Status : uint8_t { ST_OFF = 0, ST_AVAILABLE = 1, ST_FOCUS = 2, ST_CALL = 3, ST_DISCO = 4 };  // disco : a distance seulement
-enum Source : uint8_t { SRC_FACE = 0, SRC_REMOTE = 1, SRC_AUTO = 2 };
+enum Source : uint8_t { SRC_FACE = 0, SRC_REMOTE = 1, SRC_AUTO = 2, SRC_SESSION = 3 };
+enum Phase  : uint8_t { PH_NONE = 0, PH_WORK = 1, PH_BREAK = 2, PH_LONG_BREAK = 3 };
+#define STATUS_LEN        10     // voir PROTOCOLE.md
+#define SIGNAL_MS         2400   // signal de changement de phase : 3 impulsions blanches
 
 // UUID (ordre des octets inverse, format Bluefruit)
 // 7c0be000-5a7e-4b1d-9c3a-2f6d8e1b4a00
@@ -109,6 +112,20 @@ uint32_t faceCandidateT = 0;
 uint32_t faceSince      = 0;
 bool     focusExpired   = false;
 
+// Session focus (Pomodoro, 52/17, 90/20...) : le minuteur tourne dans le cube,
+// l'app peut se deconnecter ou l'iPhone se verrouiller sans rien interrompre.
+struct Session {
+  bool     on;
+  uint8_t  workMin, breakMin, longBreakMin, cycles;   // cycles = blocs de travail avant la longue pause
+  uint8_t  phase, cycle;                              // cycle = numero du bloc de travail en cours (1..)
+  uint32_t phaseStart, phaseLen;
+};
+Session  sess = {};
+volatile bool    sessStartReq = false, sessStopReq = false;
+volatile uint8_t sessReq[4];
+uint32_t signalStart = 0;
+bool     signalOn = false;
+
 uint8_t  shownStatus = 255, shownSource = 255;
 uint8_t  batteryPct = 100;
 bool     charging = false;
@@ -167,8 +184,57 @@ void updateFace(uint32_t now) {
     faceSince = now;
     focusExpired = false;
     remoteStatus = -1;          // retourner le cube reprend la main
+    sess.on = false;            // et arrete une session focus
+    shownStatus = 255;
     Serial.printf("Face %d -> statut %d\n", face, cfg.faceStatus[face]);
   }
+}
+
+// --------------------------------------------------------------- session focus
+void startPhase(uint8_t ph, uint32_t now) {
+  sess.phase = ph;
+  sess.phaseStart = now;
+  uint8_t m = ph == PH_WORK ? sess.workMin : ph == PH_BREAK ? sess.breakMin : sess.longBreakMin;
+  sess.phaseLen = (uint32_t)m * 60000UL;
+  signalStart = now; signalOn = true;
+  shownStatus = 255;
+  Serial.printf("Session : phase %d, bloc %d/%d, %d min\n", ph, sess.cycle, sess.cycles, m);
+}
+
+void updateSession(uint32_t now) {
+  if (sessStopReq) { sessStopReq = false; if (sess.on) { sess.on = false; shownStatus = 255; } }
+  if (sessStartReq) {
+    sessStartReq = false;
+    uint8_t w = sessReq[0], b = sessReq[1], lb = sessReq[2], c = sessReq[3];
+    sess.workMin      = w < 1 ? 1 : (w > 240 ? 240 : w);
+    sess.breakMin     = b > 60 ? 60 : b;
+    sess.longBreakMin = lb > 60 ? 60 : lb;
+    sess.cycles       = c < 1 ? 1 : (c > 12 ? 12 : c);
+    sess.on = true; sess.cycle = 1;
+    remoteStatus = -1;
+    startPhase(PH_WORK, now);
+  }
+  if (!sess.on || now - sess.phaseStart < sess.phaseLen) return;
+
+  if (sess.phase == PH_WORK) {
+    if (sess.longBreakMin && sess.cycle >= sess.cycles) startPhase(PH_LONG_BREAK, now);
+    else if (sess.breakMin)                             startPhase(PH_BREAK, now);
+    else { if (sess.cycle < 255) sess.cycle++; startPhase(PH_WORK, now); }
+  } else if (sess.phase == PH_BREAK) {
+    if (sess.cycle < 255) sess.cycle++;
+    startPhase(PH_WORK, now);
+  } else {                                   // fin de la longue pause : serie terminee
+    sess.on = false;
+    signalStart = now; signalOn = true;
+    shownStatus = 255;
+    Serial.println("Session terminee");
+  }
+}
+
+uint16_t sessionRemainingS(uint32_t now) {
+  if (!sess.on) return 0;
+  uint32_t el = now - sess.phaseStart;
+  return el >= sess.phaseLen ? 0 : (uint16_t)((sess.phaseLen - el + 999) / 1000);
 }
 
 // --------------------------------------------------------------- statut effectif
@@ -182,16 +248,22 @@ void effectiveStatus(uint32_t now, uint8_t &st, uint8_t &src) {
 
   if (cfg.faceStatus[face] == ST_OFF) { st = ST_OFF; src = SRC_FACE; return; }
   if (autoCall)                       { st = ST_CALL; src = SRC_AUTO; return; }
+  if (sess.on)                        { st = sess.phase == PH_WORK ? ST_FOCUS : ST_AVAILABLE; src = SRC_SESSION; return; }
   if (remoteStatus >= 0)              { st = remoteStatus; src = SRC_REMOTE; return; }
   st = faceSt; src = SRC_FACE;
 }
 
 void publishStatus(uint8_t st, uint8_t src) {
-  uint8_t flags = (charging ? 1 : 0) | (autoCall ? 2 : 0) | (focusExpired ? 4 : 0);
-  uint8_t buf[4] = {st, src, batteryPct, flags};
-  chrStatus.write(buf, 4);
+  uint32_t now = millis();
+  uint8_t flags = (charging ? 1 : 0) | (autoCall ? 2 : 0) | (focusExpired ? 4 : 0) | (sess.on ? 8 : 0);
+  uint8_t phMin = !sess.on ? 0 : sess.phase == PH_WORK ? sess.workMin : sess.phase == PH_BREAK ? sess.breakMin : sess.longBreakMin;
+  uint16_t rem = sessionRemainingS(now);
+  uint8_t buf[STATUS_LEN] = {st, src, batteryPct, flags,
+                             sess.on ? sess.phase : (uint8_t)PH_NONE, sess.on ? sess.cycle : (uint8_t)0,
+                             (sess.on && sess.longBreakMin) ? sess.cycles : (uint8_t)0, phMin, (uint8_t)(rem & 0xFF), (uint8_t)(rem >> 8)};
+  chrStatus.write(buf, STATUS_LEN);
   for (uint16_t c = 0; c < BLE_MAX_CONNECTION; c++) {
-    if (Bluefruit.connected(c) && chrStatus.notifyEnabled(c)) chrStatus.notify(c, buf, 4);
+    if (Bluefruit.connected(c) && chrStatus.notifyEnabled(c)) chrStatus.notify(c, buf, STATUS_LEN);
   }
 }
 
@@ -211,17 +283,30 @@ uint32_t scaled(uint8_t r, uint8_t g, uint8_t b, float k) {
   return ring.Color((uint8_t)(r * k), (uint8_t)(g * k), (uint8_t)(b * k));
 }
 
+// Pendant une session focus, l'anneau sert de cadran : les LED encore allumees
+// representent le temps restant de la phase, la derniere s'eteint progressivement.
+float progressFactor(int i, float frac) {
+  if (frac < 0) return 1.0f;
+  float lit = frac * NUM_LEDS;                 // nombre de LED encore allumees
+  if (i < (int)lit) return 1.0f;
+  if (i == (int)lit) return 0.08f + 0.92f * (lit - (int)lit);
+  return 0.08f;                                // temps ecoule : trace tres faible
+}
+
 void renderLeds(uint8_t st, uint32_t now) {
   if (st == ST_OFF) { ledPower(false); return; }
   ledPower(true);
+  float frac = -1;
+  if (sess.on && sess.phaseLen && (st == ST_FOCUS || st == ST_AVAILABLE))
+    frac = 1.0f - min(1.0f, (now - sess.phaseStart) / (float)sess.phaseLen);
   switch (st) {
     case ST_AVAILABLE:
-      for (int i = 0; i < NUM_LEDS; i++) ring.setPixelColor(i, scaled(0, 200, 60, 0.6f));
+      for (int i = 0; i < NUM_LEDS; i++) ring.setPixelColor(i, scaled(0, 200, 60, 0.6f * progressFactor(i, frac)));
       break;
     case ST_FOCUS: {
       float ph = (now % 4000) / 4000.0f * 2 * PI;
       float k = 0.2f + 0.8f * (0.5f - 0.5f * cosf(ph));
-      for (int i = 0; i < NUM_LEDS; i++) ring.setPixelColor(i, scaled(255, 110, 0, k));
+      for (int i = 0; i < NUM_LEDS; i++) ring.setPixelColor(i, scaled(255, 110, 0, k * progressFactor(i, frac)));
       break;
     }
     case ST_CALL: {
@@ -264,6 +349,15 @@ void renderLeds(uint8_t st, uint32_t now) {
       break;
     }
   }
+  // changement de phase : 3 impulsions blanches lentes (1,25 Hz, sous le seuil des 3 eclairs/s)
+  if (signalOn) {
+    uint32_t t = now - signalStart;
+    if (t >= SIGNAL_MS) signalOn = false;
+    else if (t % 800 < 400) {
+      float k = sinf((t % 800) / 400.0f * PI);
+      for (int i = 0; i < NUM_LEDS; i++) ring.setPixelColor(i, scaled(255, 255, 255, k));
+    }
+  }
   // batterie faible : une LED clignote en blanc 0.2 s toutes les 10 s
   if (batteryPct <= 10 && !charging && (now % 10000) < 200) ring.setPixelColor(0, scaled(255, 255, 255, 1.0f));
   ring.show();
@@ -275,12 +369,18 @@ void onCommand(uint16_t conn, BLECharacteristic *chr, uint8_t *data, uint16_t le
   if (len < 1) return;
   uint8_t cmd = data[0], val = len > 1 ? data[1] : 0;
   switch (cmd) {
-    case 0x01: remoteStatus = (val >= 1 && val <= 4) ? (int8_t)val : -1; break;   // 4 = disco
+    case 0x01: remoteStatus = (val >= 1 && val <= 4) ? (int8_t)val : -1; sessStopReq = true; break;   // 4 = disco
     case 0x02: autoCall = val != 0; autoCallSeen = millis(); break;
     case 0x03: cfg.brightness = constrain(val, 5, MAX_BRIGHTNESS); cfgDirty = true; break;
     case 0x04: cfg.focusMinutes = constrain(val, 1, 240); cfgDirty = true; break;
     case 0x05: if (val <= 3) learnRequest = val; break;
     case 0x06: factoryReset = true; break;
+    case 0x07:                                   // session focus : [0x07, travail, pause, longue pause, cycles]
+      if (len >= 5 && data[1] > 0) {
+        for (int i = 0; i < 4; i++) sessReq[i] = data[1 + i];
+        sessStartReq = true;
+      } else sessStopReq = true;                 // [0x07, 0] = arreter
+      break;
   }
   shownStatus = 255;  // forcer la republication
 }
@@ -307,11 +407,11 @@ void setupBLE() {
   svcCube.begin();
   chrStatus.setProperties(CHR_PROPS_READ | CHR_PROPS_NOTIFY);
   chrStatus.setPermission(SECMODE_OPEN, SECMODE_NO_ACCESS);
-  chrStatus.setFixedLen(4);
+  chrStatus.setFixedLen(STATUS_LEN);
   chrStatus.begin();
   chrCmd.setProperties(CHR_PROPS_WRITE | CHR_PROPS_WRITE_WO_RESP);
   chrCmd.setPermission(SECMODE_NO_ACCESS, SECMODE_OPEN);
-  chrCmd.setMaxLen(4);
+  chrCmd.setMaxLen(8);
   chrCmd.setWriteCallback(onCommand);
   chrCmd.begin();
 
@@ -362,6 +462,7 @@ void loop() {
   if (cfgDirty) { cfgDirty = false; saveConfig(); }
 
   updateFace(now);
+  updateSession(now);
   if (now - lastBattery > 60000 || lastBattery == 0) { lastBattery = now; updateBattery(); }
 
   uint8_t st, src;

@@ -112,6 +112,34 @@ details .inner{display:grid;gap:12px;padding-bottom:24px}
 .app-footer{border-top:1px solid var(--line);padding-top:20px}
 .tagline{font-family:var(--font-heading);font-size:1.375rem;line-height:1.15;letter-spacing:-.02em}
 
+/* ============ Mode focus ============ */
+.focus{display:grid;gap:0}
+.method small{display:block}
+.method .tick{flex:none;width:22px;height:22px;border:1.5px solid var(--control);border-radius:50%;display:grid;place-items:center;margin-left:auto}
+.method .tick::after{content:"";width:10px;height:10px;border-radius:50%;background:var(--fg);transform:scale(0);transition:transform var(--duration-ui)}
+.method[aria-checked="true"]{border-left-color:var(--fg)}
+.method[aria-checked="true"] .tick{border-color:var(--fg)}
+.method[aria-checked="true"] .tick::after{transform:scale(1)}
+.method .num{flex:none;width:44px;font-family:var(--font-heading);font-size:1.375rem;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.custom{display:grid;grid-template-columns:1fr 1fr;gap:12px 10px;padding:16px 0 4px}
+.custom[hidden]{display:none}
+.custom label{display:grid;gap:6px;font-size:.8125rem;line-height:1.3;color:var(--fg-muted)}
+.custom .field{width:100%;font-variant-numeric:tabular-nums}
+.focus .button{margin-top:20px}
+.run[hidden],.setup[hidden]{display:none}
+.run{display:grid;gap:16px}
+.run__phase{display:flex;align-items:center;gap:10px;font-size:.9375rem;font-weight:500}
+.run__phase svg{width:22px;height:22px;flex:none}
+.run__time{font-family:var(--font-heading);font-weight:400;font-size:4.5rem;line-height:1;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.run__bar{height:1.5px;background:var(--line);position:relative;overflow:hidden}
+.run__bar i{position:absolute;inset:0 auto 0 0;width:0;background:var(--fg);transition:width 1s linear}
+.run__meta{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:.8125rem;line-height:1.45;color:var(--fg-muted)}
+.blocks{display:flex;gap:6px}
+.blocks span{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--control)}
+.blocks .done{background:var(--fg);border-color:var(--fg)}
+.blocks .cur{border-color:var(--fg);border-width:3px}
+.run .button{margin-top:4px}
+
 /* ============ Mode disco ============ */
 body.disco{
   --bg:var(--color-ink); --fg:var(--color-paper); --fg-muted:#AEB8C0;
@@ -179,6 +207,33 @@ body.disco .choice[data-st="4"]{border-left-color:var(--color-amber)}
     <p class="caption">Retourner le cube annule toujours un choix fait ici.</p>
   </section>
 
+  <section class="focus" aria-labelledby="focusTitle">
+    <p class="eyebrow" id="focusTitle">Mode focus</p>
+    <div class="setup" id="focusSetup">
+      <ul class="choices" role="radiogroup" aria-labelledby="focusTitle" id="methods">
+        <li><button class="choice method" role="radio" data-m="pomodoro"><span class="num">25</span><span>Pomodoro<small>25 min de travail, 5 min de pause, 15 min après 4 blocs</small></span><span class="tick"></span></button></li>
+        <li><button class="choice method" role="radio" data-m="5217"><span class="num">52</span><span>52 / 17<small>52 min de travail, 17 min de pause, en boucle</small></span><span class="tick"></span></button></li>
+        <li><button class="choice method" role="radio" data-m="9020"><span class="num">90</span><span>Cycle long<small>90 min de travail, 20 min de pause, en boucle</small></span><span class="tick"></span></button></li>
+        <li><button class="choice method" role="radio" data-m="custom"><span class="num" id="customNum">…</span><span>Personnalisé<small>Vos propres durées</small></span><span class="tick"></span></button></li>
+      </ul>
+      <div class="custom" id="customFields" hidden>
+        <label>Travail (min)<input class="field" type="number" inputmode="numeric" id="cWork" min="1" max="240" value="45"></label>
+        <label>Pause (min)<input class="field" type="number" inputmode="numeric" id="cBreak" min="0" max="60" value="10"></label>
+        <label>Longue pause (min)<input class="field" type="number" inputmode="numeric" id="cLong" min="0" max="60" value="0"></label>
+        <label>Blocs avant la longue pause<input class="field" type="number" inputmode="numeric" id="cCycles" min="1" max="12" value="4"></label>
+      </div>
+      <button class="button button--primary" id="btnFocusStart" disabled>Lancer la session</button>
+      <p class="caption">Le minuteur tourne dans le cube : vous pouvez verrouiller l'iPhone. Pendant le travail, le cube affiche Concentration ; pendant les pauses, Disponible. Retourner le cube arrête la session.</p>
+    </div>
+    <div class="run" id="focusRun" hidden aria-live="polite">
+      <p class="run__phase" id="runPhase"></p>
+      <p class="run__time" id="runTime" aria-live="off">00:00</p>
+      <div class="run__bar" aria-hidden="true"><i id="runBar"></i></div>
+      <div class="run__meta"><span id="runNext"></span><span class="blocks" id="runBlocks" aria-hidden="true"></span></div>
+      <button class="button" id="btnFocusStop">Arrêter la session</button>
+    </div>
+  </section>
+
   <section class="settings">
     <p class="eyebrow" style="margin-bottom:0">Réglages</p>
     <div>
@@ -216,7 +271,7 @@ const STATUS = "7c0be001-5a7e-4b1d-9c3a-2f6d8e1b4a00";
 const CMD = "7c0be002-5a7e-4b1d-9c3a-2f6d8e1b4a00";
 const NAMES = ["Éteint","Disponible","Concentration","En appel","Disco"];
 const SIGN_CLASS = ["sign--off","sign--available","sign--focus","sign--call","sign--disco"];
-const SOURCES = ["face posée","choix manuel","appel détecté par l'ordinateur"];
+const SOURCES = ["face posée","choix manuel","appel détecté par l'ordinateur","session focus"];
 const svg = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${inner}</svg>`;
 /* Signes de la charte : cercle ouvert, croissant, telephone. Jamais la couleur seule. */
 const ICONS = {
@@ -240,10 +295,15 @@ function showError(msg){
   e.hidden = !msg;
 }
 function setEnabled(on){
-  document.querySelectorAll('[data-st],[data-learn],#bri,#focus').forEach(el => el.disabled = !on);
+  document.querySelectorAll('[data-st],[data-learn],#bri,#focus,#btnFocusStart,#btnFocusStop').forEach(el => el.disabled = !on);
   $('btnConnect').textContent = on ? "Déconnecter" : "Connecter le cube";
   $('btnConnect').classList.toggle('button--primary', !on);
   $('linkState').textContent = on ? (device && device.name ? device.name : "Connecté") : "Non connecté";
+}
+function renderView(v){
+  const b = i => i < v.byteLength ? v.getUint8(i) : 0;
+  render(b(0), b(1), b(2), b(3));
+  renderSession(v.byteLength >= 10 && (b(3) & 8) ? { phase:b(4), block:b(5), blocks:b(6), phaseMin:b(7), rem:b(8) | (b(9) << 8) } : null);
 }
 function render(st, src, bat, flags){
   const known = st >= 0 && st < NAMES.length;
@@ -263,7 +323,7 @@ async function send(cmd, val){
   catch(e){ try { await cmdChar.writeValue(new Uint8Array([cmd, val])); } catch(e2){ showError("Envoi impossible : " + e2.message); } }
 }
 function onDisconnected(){
-  cmdChar = null; setEnabled(false); setDisco(false);
+  cmdChar = null; setEnabled(false); setDisco(false); renderSession(null);
   $('nowSign').className = 'now__sign sign--off'; $('nowSign').innerHTML = '';
   $('stText').textContent = "Déconnecté"; $('stSub').textContent = "Touchez « Connecter le cube »";
   document.querySelectorAll('[data-st]').forEach(b => b.setAttribute('aria-pressed', "false"));
@@ -281,10 +341,10 @@ async function connect(){
     const svc = await server.getPrimaryService(SVC);
     cmdChar = await svc.getCharacteristic(CMD);
     const stChar = await svc.getCharacteristic(STATUS);
-    stChar.addEventListener('characteristicvaluechanged', e => { const v = e.target.value; render(v.getUint8(0), v.getUint8(1), v.getUint8(2), v.getUint8(3)); });
+    stChar.addEventListener('characteristicvaluechanged', e => renderView(e.target.value));
     await stChar.startNotifications();
     setEnabled(true);
-    const v = await stChar.readValue(); render(v.getUint8(0), v.getUint8(1), v.getUint8(2), v.getUint8(3));
+    renderView(await stChar.readValue());
     try { localStorage.setItem('cubeName', device.name || ''); } catch(e){}
   }catch(e){
     if (e.name !== 'NotFoundError') showError("Connexion impossible : " + e.message);
@@ -302,6 +362,88 @@ document.querySelectorAll('[data-learn]').forEach(b => b.addEventListener('click
 $('bri').addEventListener('input', e => $('briVal').textContent = e.target.value + " %");
 $('bri').addEventListener('change', e => send(0x03, +e.target.value));
 $('focus').addEventListener('change', e => send(0x04, +e.target.value));
+
+/* ---------------- Mode focus : le cube tient le minuteur, l'app affiche et decompte ---------------- */
+const METHODS = {
+  pomodoro: { work:25, brk:5,  long:15, blocks:4 },
+  '5217':   { work:52, brk:17, long:0,  blocks:1 },
+  '9020':   { work:90, brk:20, long:0,  blocks:1 },
+};
+const store = {
+  get(k, d){ try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+let method = store.get('focusMethod', 'pomodoro');
+const clampField = (id, lo, hi) => { const el = $(id); let n = Math.round(+el.value); if (!Number.isFinite(n)) n = lo; n = Math.min(hi, Math.max(lo, n)); el.value = n; return n; };
+function customParams(){ return { work:clampField('cWork',1,240), brk:clampField('cBreak',0,60), long:clampField('cLong',0,60), blocks:clampField('cCycles',1,12) }; }
+function params(){ return method === 'custom' ? customParams() : METHODS[method]; }
+(function restoreCustom(){
+  const c = store.get('focusCustom', null);
+  if (c){ $('cWork').value = c.work; $('cBreak').value = c.brk; $('cLong').value = c.long; $('cCycles').value = c.blocks; }
+})();
+function selectMethod(m){
+  method = METHODS[m] || m === 'custom' ? m : 'pomodoro';
+  document.querySelectorAll('.method').forEach(b => b.setAttribute('aria-checked', b.dataset.m === method ? 'true' : 'false'));
+  $('customFields').hidden = method !== 'custom';
+  $('customNum').textContent = $('cWork').value || '…';
+  store.set('focusMethod', method);
+}
+document.querySelectorAll('.method').forEach(b => b.addEventListener('click', () => selectMethod(b.dataset.m)));
+['cWork','cBreak','cLong','cCycles'].forEach(id => $(id).addEventListener('change', () => {
+  const p = customParams(); store.set('focusCustom', p); $('customNum').textContent = p.work;
+}));
+selectMethod(method);
+
+$('btnFocusStart').addEventListener('click', async () => {
+  const p = params();
+  store.set('focusLast', p);
+  if (!cmdChar) return;
+  try { await cmdChar.writeValue(new Uint8Array([0x07, p.work, p.brk, p.long, p.blocks])); }
+  catch(e){ showError("Envoi impossible : " + e.message); }
+});
+$('btnFocusStop').addEventListener('click', () => send(0x07, 0));
+
+const PHASES = { 1:'Travail', 2:'Pause', 3:'Longue pause' };
+let sess = null, tick = 0;
+const mmss = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+function renderSession(s){
+  clearInterval(tick);
+  sess = s ? { ...s, at: performance.now() } : null;
+  $('focusSetup').hidden = !!sess;
+  $('focusRun').hidden = !sess;
+  if (!sess){ document.title = 'kwartor'; return; }
+  const sign = sess.phase === 1 ? 2 : 1;
+  $('runPhase').innerHTML = `<span class="${SIGN_CLASS[sign]}" style="display:inline-flex">${ICONS[sign]}</span><span></span>`;
+  $('runPhase').lastChild.textContent = (PHASES[sess.phase] || 'Session') +
+    (sess.blocks ? ` · bloc ${Math.min(sess.block, sess.blocks)} sur ${sess.blocks}` : ` · bloc ${sess.block}`);
+  // Ce qui vient ensuite : connu seulement si cette app a lance la session
+  const last = store.get('focusLast', null);
+  let next = '';
+  if (sess.phase === 1 && last && last.work === sess.phaseMin){
+    if (sess.blocks && sess.block >= sess.blocks && last.long) next = `Ensuite : longue pause de ${last.long} min`;
+    else if (last.brk) next = `Ensuite : pause de ${last.brk} min`;
+  } else if (sess.phase === 2) next = 'Ensuite : travail';
+  else if (sess.phase === 3) next = 'Dernière phase de la série';
+  $('runNext').textContent = next;
+  const bl = $('runBlocks'); bl.innerHTML = '';
+  for (let i = 1; i <= sess.blocks; i++){
+    const d = document.createElement('span');
+    if (i < sess.block || (i === sess.block && sess.phase !== 1)) d.className = 'done';
+    else if (i === sess.block) d.className = 'cur';
+    bl.appendChild(d);
+  }
+  const update = () => {
+    const left = Math.max(0, Math.round(sess.rem - (performance.now() - sess.at) / 1000));
+    $('runTime').textContent = mmss(left);
+    const total = sess.phaseMin * 60;
+    $('runBar').style.width = total ? (100 * (1 - left / total)).toFixed(2) + '%' : '0';
+    document.title = mmss(left) + ' · ' + (PHASES[sess.phase] || 'kwartor');
+  };
+  update();
+  tick = setInterval(update, 1000);
+}
+// Au retour au premier plan, le decompte reprend la bonne valeur (performance.now() continue de courir)
+document.addEventListener('visibilitychange', () => { if (!document.hidden && sess) renderSession({ ...sess, rem: Math.max(0, Math.round(sess.rem - (performance.now() - sess.at) / 1000)) }); });
 
 /* ---------------- Mode disco : la boule descend, tourne, et l'app s'illumine ---------------- */
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
