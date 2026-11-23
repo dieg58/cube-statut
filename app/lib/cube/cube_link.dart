@@ -59,7 +59,8 @@ class CubeLink extends ChangeNotifier {
   FocusMethod get selectedMethod =>
       focusMethodId == 'custom' ? customMethod : kFocusMethods.firstWhere((m) => m.id == focusMethodId, orElse: () => kFocusMethods.first);
 
-  Future<void> start() async {
+  /// Réglages enregistrés : rapide, à faire avant d'afficher quoi que ce soit.
+  Future<void> loadPrefs() async {
     _prefs = await SharedPreferences.getInstance();
     cubeId = _prefs.getString('cubeId');
     cubeName = _prefs.getString('cubeName');
@@ -73,11 +74,23 @@ class CubeLink extends ChangeNotifier {
           work: int.tryParse(c[0]), shortBreak: int.tryParse(c[1]), longBreak: int.tryParse(c[2]), blocks: int.tryParse(c[3]));
     }
 
-    UniversalBle.timeout = const Duration(seconds: 12);
-    _availSub = UniversalBle.availabilityStream.listen(_onAvailability);
-    _onAvailability(await UniversalBle.getBluetoothAvailabilityState());
+  }
 
+  /// Bluetooth et détection d'appel. Ne bloque jamais l'interface : l'autorisation Bluetooth
+  /// de macOS peut faire attendre la réponse du système.
+  Future<void> startBackground() async {
     _pollTimer = Timer.periodic(const Duration(seconds: 2), (_) => _pollMedia());
+    try {
+      UniversalBle.timeout = const Duration(seconds: 12);
+      _availSub = UniversalBle.availabilityStream.listen(_onAvailability);
+      final s = await UniversalBle.getBluetoothAvailabilityState().timeout(const Duration(seconds: 8));
+      _onAvailability(s);
+    } on TimeoutException {
+      // L'état arrivera par availabilityStream (par exemple après la réponse à la demande d'autorisation).
+    } catch (e) {
+      lastError = 'Bluetooth indisponible : $e';
+      _notify();
+    }
   }
 
   // ---------------------------------------------------------------- Bluetooth

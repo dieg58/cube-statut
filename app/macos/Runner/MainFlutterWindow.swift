@@ -3,6 +3,7 @@ import CoreAudio
 import CoreMediaIO
 import FlutterMacOS
 import ServiceManagement
+import window_manager
 
 class MainFlutterWindow: NSWindow {
   override func awakeFromNib() {
@@ -15,6 +16,12 @@ class MainFlutterWindow: NSWindow {
     KwartorSystem.register(with: flutterViewController.engine.binaryMessenger)
 
     super.awakeFromNib()
+  }
+
+  // Fenêtre cachée au lancement : Dart l'affiche (premier lancement) ou la laisse dans la barre de menus.
+  override public func order(_ place: NSWindow.OrderingMode, relativeTo otherWin: Int) {
+    super.order(place, relativeTo: otherWin)
+    hiddenWindowAtLaunch()
   }
 }
 

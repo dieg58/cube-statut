@@ -1,4 +1,5 @@
 // Kwartor - app de bureau (Mac et Windows) du cube de statut.
+import 'dart:async';
 import 'dart:io';
 
 import 'package:material_ui/material_ui.dart';
@@ -15,7 +16,10 @@ Future<void> main(List<String> args) async {
   await windowManager.ensureInitialized();
 
   final link = CubeLink();
-  await link.start();
+  await link.loadPrefs();
+
+  // 1. L'interface d'abord : rien ne doit attendre le Bluetooth.
+  runApp(KwartorApp(link: link));
 
   late final KwartorTray tray;
   Future<void> quit() async {
@@ -25,9 +29,6 @@ Future<void> main(List<String> args) async {
     await windowManager.destroy();
     exit(0);
   }
-
-  tray = KwartorTray(link, onQuit: quit);
-  await tray.init();
 
   // Démarrage discret (ouverture de session) : seulement l'icône, sauf si aucun cube n'est encore choisi.
   final hidden = args.contains('--hidden') || (Platform.isMacOS && link.cubeId != null);
@@ -41,10 +42,23 @@ Future<void> main(List<String> args) async {
   );
   await windowManager.waitUntilReadyToShow(options, () async {
     await windowManager.setPreventClose(true);
-    if (!hidden) await tray.showWindow();
+    if (!hidden) {
+      await windowManager.show();
+      await windowManager.focus();
+    }
   });
 
-  runApp(KwartorApp(link: link));
+  // 2. L'icône de la barre de menus.
+  tray = KwartorTray(link, onQuit: quit);
+  try {
+    await tray.init();
+  } catch (e) {
+    debugPrint('tray: $e');
+    await windowManager.show();
+  }
+
+  // 3. Bluetooth et détection d'appel, en arrière-plan.
+  unawaited(link.startBackground());
 }
 
 class KwartorApp extends StatefulWidget {
