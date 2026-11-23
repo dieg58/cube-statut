@@ -1,0 +1,53 @@
+# Construit l'app Kwartor pour Mac et Windows à chaque modification du dossier app/.
+# Les fichiers prêts à installer se téléchargent dans l'onglet Actions > dernière exécution > Artifacts.
+name: App bureau (Mac + Windows)
+
+on:
+  push:
+    paths: ["app/**", ".github/workflows/app-bureau.yml"]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: app } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  macos:
+    needs: test
+    runs-on: macos-latest
+    defaults: { run: { working-directory: app } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: flutter build macos --release
+      # Version non signée : au premier lancement, clic droit sur Kwartor.app > Ouvrir.
+      # Signature et notarisation : à ajouter avec le compte Apple Developer (certificat Developer ID).
+      - name: Archive
+        run: ditto -c -k --keepParent build/macos/Build/Products/Release/Kwartor.app Kwartor-macOS.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: Kwartor-macOS, path: app/Kwartor-macOS.zip }
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    defaults: { run: { working-directory: app } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with: { channel: stable, cache: true }
+      - run: flutter pub get
+      - run: flutter build windows --release
+      - name: Archive
+        shell: pwsh
+        run: Compress-Archive -Path build/windows/x64/runner/Release/* -DestinationPath Kwartor-Windows.zip
+      - uses: actions/upload-artifact@v4
+        with: { name: Kwartor-Windows, path: app/Kwartor-Windows.zip }
