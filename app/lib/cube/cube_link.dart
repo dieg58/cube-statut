@@ -177,8 +177,20 @@ class CubeLink extends ChangeNotifier {
     _scanSub = UniversalBle.scanStream.listen((d) {
       if (looksLikeCube(d.name, d.services)) onCube(d);
     });
+    // Un cube déjà connecté à cet ordinateur (autre app, ancien agent) n'apparaît pas dans un scan :
+    // on le demande directement au système.
     try {
-      await UniversalBle.startScan(scanFilter: ScanFilter(withServices: [kServiceUuid], withNamePrefix: kNamePrefixes));
+      final known = await UniversalBle.getSystemDevices(withServices: [kServiceUuid]).timeout(const Duration(seconds: 4));
+      for (final d in known) {
+        if (looksLikeCube(d.name, d.services) || d.services.isEmpty) onCube(d);
+      }
+    } catch (e) {
+      debugPrint('systemDevices: $e');
+    }
+    // Scan sans filtre système : le tri se fait ici (looksLikeCube). Plus robuste d'un firmware
+    // et d'un système à l'autre que les filtres de CoreBluetooth / WinRT.
+    try {
+      await UniversalBle.startScan();
     } catch (e) {
       lastError = 'Recherche Bluetooth impossible : $e';
       _scheduleRetry();
